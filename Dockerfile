@@ -21,4 +21,9 @@ RUN poetry export \
     rm requirements.txt && \
     rm -rf /root/.cache
 
+RUN echo "/freqknowfit" > \
+    /usr/local/lib/python3.8/dist-packages/freqknowfit.pth
+
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
 ADD . /freqknowfit/
