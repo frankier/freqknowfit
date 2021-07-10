@@ -35,7 +35,8 @@ def draw_plot(df_resp, ax):
 
 @click.command()
 @click.argument("dfin", type=click.Path(exists=True))
-def main(dfin):
+@click.argument("imgout")
+def main(dfin, imgout):
     df = pandas.read_parquet(dfin)
     df["known"] = df["score"] >= 5
     fig, ax = plt.subplots(5, 3)
@@ -49,7 +50,7 @@ def main(dfin):
         draw_plot(df_resp, resp_ax)
         print(f"Done {progress}")
     fig.tight_layout()
-    plt.show()
+    plt.savefig(imgout)
 
 
 if __name__ == "__main__":
