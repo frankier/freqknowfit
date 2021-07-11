@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 
 
 NUM_SAMPLE_POINTS = 2048
+TRANSFER_X = np.linspace(-10, 10, NUM_SAMPLE_POINTS)
+
 
 
 def resample_nonparameteric(df, x_in, x_out):
@@ -32,21 +34,21 @@ def mk_curve_transformer(estimator):
         return (
             y_offset
             + (1 - y_offset)
-            * estimator.evaluate(x_scale * (x - x_shift)).transfer()
+            * estimator.evaluate(x_scale * x - x_shift).transfer()
         )
     return transformed_curve
 
 
 def get_overlay(x_in, x_out, trans_func, estimator):
     transformed_curve = mk_curve_transformer(estimator)
-    support = estimator.evaluate(x_in).support()
+    #support = estimator.evaluate(x_in).support()
     try:
         popt, pcov = scipy.optimize.curve_fit(
             mk_curve_transformer(estimator),
             x_in,
             trans_func(x_in),
             (0, 1, 0),
-            sigma=1 / np.sqrt(support),
+            #sigma=1 / np.sqrt(support),
             absolute_sigma=True
         )
         return transformed_curve(x_out, *popt)
