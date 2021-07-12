@@ -14,7 +14,7 @@ options(error = function() {
   }
 })
 
-function glmFit(df, link) {
+glmFit <- function(df, link) {
   fit <- glm(known ~ zipf, data=df, family=binomial(link=link))
   print(summary(fit))
   c(
@@ -22,7 +22,7 @@ function glmFit(df, link) {
   )
 }
 
-function betaBinFit(df, link) {
+betaBinFit <- function(df, link) {
   library(aod)
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
   print(summary(fit))
@@ -31,7 +31,7 @@ function betaBinFit(df, link) {
   )
 }
 
-function glmmTmbFit(df, link) {
+glmmTmbFit <- function(df, link) {
   library(glmmTMB)
   fit <- glmmTMB(
     unknown ~ zipf,
