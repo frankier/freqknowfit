@@ -16,6 +16,8 @@ RUN apt-get update -qq -y && \
 
 WORKDIR /freqknowfit/
 
+ENV LANG='C.UTF-8' LC_ALL='C.UTF-8'
+
 RUN LIBARROW_MINIMAL=false \
     R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
     R -e 'install.packages("R2admb")' && \
