@@ -28,21 +28,21 @@ MODELS = {
     "statsmodelsGlmCloglog": "py",
 }
 
-DATASETS = [
-    "blp",
-    "svl12k",
-    "flp",
-    "spalex",
-    "elp",
-    "ecp",
-]
+DATASETS = {
+    "blp": "blp.inventory.enriched.parquet",
+    "svl12k": "svl12k.enriched.parquet",
+    "flp": "flp.inventory.enriched.parquet",
+    "spalex": "spalex.inventory.enriched.parquet",
+    "elp": "elp.inventory.enriched.parquet",
+    "ecp": "ecp.inventory.enriched.parquet",
+    }
 
-df = pd.merge(
-    pandas.DataFrame(model=MODELS.keys()),
-    pandas.DataFrame(dataset=DATASETS),
+df = pandas.merge(
+    pandas.DataFrame({"model": MODELS.keys()}),
+    pandas.DataFrame({"dataset": DATASETS.keys()}),
     how="cross"
 )
-paramspace = ParamSpace(df)
+paramspace = Paramspace(df)
 
 
 rule all:
@@ -52,13 +52,18 @@ rule all:
 
 rule fit_model:
     input:
-        lambda wc: pjoin(VOCABAQDATA_WORK, wc)
+        lambda wc: pjoin(VOCABAQDATA_WORK, DATASETS[wc.dataset])
     output:
         pjoin(WORK, f"{paramspace.wildcard_pattern}.parquet")
+    params:
+        r_script = srcdir("../../freqknowfit/parametric/regress.R")
     run:
-        shell(f"mkdir -p " + WORK)
+        from os import makedirs
+        from os.path import dirname
+        makedirs(dirname(output[0]), exist_ok=True)
+
         if MODELS[wildcards.model] == "R":
-            prog = "Rscript " + srcdir("../../freqknowfit/parametric/regress.R")
+            prog = "Rscript " + params.r_script
         else:
             prog = "python -m freqknowfit.parametric.regress"
 
