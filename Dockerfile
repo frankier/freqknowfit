@@ -6,6 +6,8 @@ RUN apt-get update -qq -y && \
         wget \
         python3-dev \
         python3-pip \
+        r-base \
+        libomp-dev \
         git && \
     rm -rf /var/lib/apt/lists/*
 
@@ -25,5 +27,10 @@ RUN echo "/freqknowfit" > \
     /usr/local/lib/python3.8/dist-packages/freqknowfit.pth
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+RUN R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
+    R -e 'install.packages("R2admb")' && \
+    R -e 'install.packages("glmmADMB", repos=c("http://glmmadmb.r-forge.r-project.org/repos", getOption("repos")), type="source")' && \
+    R -e 'devtools::install_github("glmmTMB/glmmTMB/glmmTMB")'
 
 ADD . /freqknowfit/
