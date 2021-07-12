@@ -16,7 +16,8 @@ RUN apt-get update -qq -y && \
 
 WORKDIR /freqknowfit/
 
-RUN R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
+RUN LIBARROW_MINIMAL=false \
+    R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
     R -e 'install.packages("R2admb")' && \
     R -e 'install.packages("glmmADMB", repos=c("http://glmmadmb.r-forge.r-project.org/repos", getOption("repos")), type="source")' && \
     R -e 'devtools::install_github("glmmTMB/glmmTMB/glmmTMB")'
