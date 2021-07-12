@@ -17,7 +17,7 @@ options(error = function() {
 function glmFit(df, link) {
   fit <- glm(known ~ zipf, data=df, family=binomial(link=link))
   print(summary(fit))
-  return c(
+  c(
     coef = fit$coef
   )
 }
@@ -26,7 +26,7 @@ function betaBinFit(df, link) {
   library(aod)
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
   print(summary(fit))
-  return c(
+  c(
     coef = fit$coef
   )
 }
@@ -40,26 +40,26 @@ function glmmTmbFit(df, link) {
     ziformula=~1,
   )
   summary(fit)
-  return c(
+  c(
     coef = fit$coef
   )
 }
 
 regressors <- c(
   glmLogit = function(df) {
-    return glmFit(df, "logit")
+    glmFit(df, "logit")
   },
   glmProbit = function(df) {
-    return glmFit(df, "probit")
+    glmFit(df, "probit")
   },
   glmCloglog = function(df) {
-    return glmFit(df, "cloglog")
+    glmFit(df, "cloglog")
   },
   aodBetabinLogit = function(df) {
-    return betaBinFit(df, "logit")
+    betaBinFit(df, "logit")
   },
   aodBetabinCloglog = function(df) {
-    return betaBinFit(df, "cloglog")
+    betaBinFit(df, "cloglog")
   },
   glmmadmb = function(df) {
     library(glmmADMB)
@@ -73,23 +73,23 @@ regressors <- c(
       save.dir="glmmadmb"
     )
     summary(fit)
-    return c(
+    c(
       coef = fit$coef
     )
   },
   glmmTmbLogit = function(df) {
-    return glmmTmbFit(df, "logit")
+    glmmTmbFit(df, "logit")
   },
   glmmTmbProbit = function(df) {
-    return glmmTmbFit(df, "probit")
+    glmmTmbFit(df, "probit")
   },
   glmmTmbCloglog = function(df) {
-    return glmmTmbFit(df, "cloglog")
+    glmmTmbFit(df, "cloglog")
   },
   vglm = function(df) {
     fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df.resp, trace = TRUE)
     summary(fit)
-    return c(
+    c(
       coef = fit$coef
     )
   }
