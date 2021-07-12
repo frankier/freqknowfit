@@ -24,9 +24,14 @@ def fit_statsmodels(df_resp, link):
         family=Binomial(link=link_func)
     ).fit()
     print(model.summary())
-    print(model.params)
     return {
-        "coef": model.coef
+        "const_coef": model.params[0],
+        "zipf_coef": model.params[1],
+        "const_err": model.stand_errors[0],
+        "zipf_err": model.stand_errors[1],
+        "aic": model.aic,
+        "bic_deviance": model.bic_deviance,
+        "bic_llf": model.bic_llf,
     }
 
 
