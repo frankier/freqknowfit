@@ -56,7 +56,7 @@ rule fit_model:
     output:
         pjoin(WORK, f"{paramspace.wildcard_pattern}.parquet")
     params:
-        r_script = srcdir("../../freqknowfit/parametric/regress.R")
+        r_script = srcdir("../freqknowfit/parametric/regress.R")
     run:
         from os import makedirs
         from os.path import dirname
