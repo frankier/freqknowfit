@@ -47,10 +47,15 @@ METHODS = {
 @click.argument("dfin", type=click.Path(exists=True))
 @click.argument("dfout", type=click.Path())
 def main(method, dfin, dfout):
+    print("Loading dataframe")
     fit = METHODS[method]
     df = pandas.read_parquet(dfin)
+    print("Loaded!")
     cols = None
-    for respondent, resp_df in df.groupby("respondent"):
+    idx1 = 1
+    grouped = df.groupby("respondent")
+    for respondent, resp_df in grouped:
+        print(f"Regressing respondent {respondent} [{idx1} / {len(grouped)}]")
         row = fit(resp_df)
         if cols is None:
             cols = {k: [] for k in row}
@@ -58,7 +63,10 @@ def main(method, dfin, dfout):
         for k, v in row.items():
             cols[k].append(v)
         cols["respondent"].append(respondent)
+        idx1 += 1
+    print("Writing dataframe")
     pandas.DataFrame(cols).to_parquet(dfout)
+    print("Written")
 
 
 if __name__ == "__main__":
