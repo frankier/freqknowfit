@@ -8,6 +8,9 @@ RUN apt-get update -qq -y && \
         python3-pip \
         r-base \
         libomp-dev \
+        libxml2-dev \
+        libssl-dev \
+        libcurl4-openssl-dev \
         git && \
     rm -rf /var/lib/apt/lists/*
 
