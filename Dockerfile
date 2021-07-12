@@ -16,6 +16,11 @@ RUN apt-get update -qq -y && \
 
 WORKDIR /freqknowfit/
 
+RUN R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
+    R -e 'install.packages("R2admb")' && \
+    R -e 'install.packages("glmmADMB", repos=c("http://glmmadmb.r-forge.r-project.org/repos", getOption("repos")), type="source")' && \
+    R -e 'devtools::install_github("glmmTMB/glmmTMB/glmmTMB")'
+
 RUN python3 -m pip install --upgrade poetry==1.1.7
 
 ADD pyproject.toml poetry.lock /freqknowfit/
@@ -30,10 +35,5 @@ RUN echo "/freqknowfit" > \
     /usr/local/lib/python3.8/dist-packages/freqknowfit.pth
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
-
-RUN R -e 'install.packages(c("aod", "devtools", "arrow"))' && \
-    R -e 'install.packages("R2admb")' && \
-    R -e 'install.packages("glmmADMB", repos=c("http://glmmadmb.r-forge.r-project.org/repos", getOption("repos")), type="source")' && \
-    R -e 'devtools::install_github("glmmTMB/glmmTMB/glmmTMB")'
 
 ADD . /freqknowfit/
