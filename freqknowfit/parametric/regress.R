@@ -14,9 +14,15 @@ options(error = function() {
   }
 })
 
+maybePrintSummary <- function(fit) {
+  if (nzchar(Sys.getenv("PRINT_SUMMARIES"))) {
+    print(summary(fit))
+  }
+}
+
 glmFit <- function(df, link) {
   fit <- glm(known ~ zipf, data=df, family=binomial(link=link))
-  print(summary(fit))
+  maybePrintSummary(fit)
   c(
     coef = fit$coef
   )
@@ -25,7 +31,7 @@ glmFit <- function(df, link) {
 betaBinFit <- function(df, link) {
   library(aod)
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
-  print(summary(fit))
+  maybePrintSummary(fit)
   c(
     coef = fit$coef
   )
@@ -35,11 +41,11 @@ glmmTmbFit <- function(df, link) {
   library(glmmTMB)
   fit <- glmmTMB(
     unknown ~ zipf,
-    data=df.resp,
+    data=df,
     family=binomial(link=link),
     ziformula=~1,
   )
-  summary(fit)
+  maybePrintSummary(fit)
   c(
     coef = fit$coef
   )
@@ -72,7 +78,7 @@ regressors <- c(
       debug=TRUE,
       save.dir="glmmadmb"
     )
-    summary(fit)
+    maybePrintSummary(fit)
     c(
       coef = fit$coef
     )
@@ -87,8 +93,8 @@ regressors <- c(
     glmmTmbFit(df, "cloglog")
   },
   vglm = function(df) {
-    fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df.resp, trace = TRUE)
-    summary(fit)
+    fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df, trace = TRUE)
+    maybePrintSummary(fit)
     c(
       coef = fit$coef
     )
@@ -97,15 +103,18 @@ regressors <- c(
 
 library(arrow)
 
+print("Loading dataframe")
 args <- commandArgs(trailingOnly = TRUE)
 df <- read_parquet(args[2])
 resp.dfs <- split(df, df$respondent)
+print("Loaded!")
 
 regressor <- regressors[[args[1]]]
 
 cols <- NULL
 idx <- 1
 for (resp.id in names(resp.dfs)) {
+  cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
   resp.df <- resp.dfs[[resp.id]]
   row <- regressor(df)
   if (is.null(cols)) {
@@ -120,4 +129,6 @@ for (resp.id in names(resp.dfs)) {
   idx <- idx + 1
 }
 df <- data.frame(cols)
+print("Writing dataframe")
 write_parquet(df, args[3])
+print("Written")
