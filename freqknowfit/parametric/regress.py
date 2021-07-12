@@ -55,7 +55,7 @@ def main(method, dfin, dfout):
         if cols is None:
             cols = {k: [] for k in row}
             cols["respondent"] = []
-        for k, v in row:
+        for k, v in row.items():
             cols[k].append(v)
         cols["respondent"].append(respondent)
     pandas.DataFrame(cols).to_parquet(dfout)
