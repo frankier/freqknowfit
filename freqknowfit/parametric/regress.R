@@ -1,3 +1,5 @@
+CHUNK_SIZE <- 65536
+
 options(error = function() {
   calls <- sys.calls()
   if (length(calls) >= 2L) {
@@ -23,8 +25,12 @@ maybePrintSummary <- function(fit) {
 glmFit <- function(df, link) {
   fit <- glm(known ~ zipf, data=df, family=binomial(link=link))
   maybePrintSummary(fit)
+  coefs  <- coef(summary(fit))
   c(
-    coef = fit$coef
+    const_coef = coefs[[1,1]],
+    zipf_coef = coefs[[2,1]],
+    const_err = coefs[[1,2]],
+    zipf_err = coefs[[2,2]]
   )
 }
 
@@ -33,7 +39,8 @@ betaBinFit <- function(df, link) {
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
   maybePrintSummary(fit)
   c(
-    coef = fit$coef
+    const_coef = fit[["coef.(Intercept)"]],
+    zipf_coef = fit[["coef.zipf"]]
   )
 }
 
@@ -47,7 +54,8 @@ glmmTmbFit <- function(df, link) {
   )
   maybePrintSummary(fit)
   c(
-    coef = fit$coef
+    const_coef = fit[["coef.(Intercept)"]],
+    zipf_coef = fit[["coef.zipf"]]
   )
 }
 
@@ -80,7 +88,8 @@ regressors <- c(
     )
     maybePrintSummary(fit)
     c(
-      coef = fit$coef
+      const_coef = fit[["coef.(Intercept)"]],
+      zipf_coef = fit[["coef.zipf"]]
     )
   },
   glmmTmbLogit = function(df) {
@@ -96,7 +105,8 @@ regressors <- c(
     fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df, trace = TRUE)
     maybePrintSummary(fit)
     c(
-      coef = fit$coef
+      const_coef = fit[["coef.(Intercept)"]],
+      zipf_coef = fit[["coef.zipf"]]
     )
   }
 )
@@ -109,26 +119,51 @@ df <- read_parquet(args[2])
 resp.dfs <- split(df, df$respondent)
 print("Loaded!")
 
+outParquetsDir <- args[3]
+dir.create(outParquetsDir, recursive = TRUE)
 regressor <- regressors[[args[1]]]
+chunk.idx <- 1
+
+flush <- function(last) {
+  if (last) {
+    trueIdx = idx - 1
+  } else {
+    trueIdx = idx
+  }
+  chunkSize = trueIdx %% CHUNK_SIZE
+  shouldFlush <- (last && (chunkSize > 0)) || chunkSize == 0
+  if (!shouldFlush) {
+    return()
+  }
+  outPath <- file.path(outParquetsDir, sprintf("%08d.parquet", chunk.idx))
+  outDf <- do.call(data.frame, cols)
+  if (chunkSize > 0) {
+    outDf <- head(outDf, chunkSize)
+  }
+  write_parquet(x=outDf, sink=outPath)
+  chunk.idx <<- chunk.idx + 1
+}
 
 cols <- NULL
 idx <- 1
 for (resp.id in names(resp.dfs)) {
-  cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
+  if (nzchar(Sys.getenv("PRINT_PROGRESS"))) {
+    cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
+  }
   resp.df <- resp.dfs[[resp.id]]
-  row <- regressor(df)
+  row <- regressor(resp.df)
   if (is.null(cols)) {
-    cols <- rep(rep(NULL, length(resp.dfs)), length(row))
-    names(cols) <- names(row)
-    cols$respondent <- rep(NULL, length(resp.dfs));
+    cols = list(respondent=rep("", CHUNK_SIZE))
+    for (col.name in names(row)) {
+      cols[[col.name]] = rep(row[[col.name]], CHUNK_SIZE)
+    }
   }
+  colIdx = ((idx - 1) %% CHUNK_SIZE) + 1
+  cols$respondent[colIdx] = resp.id;
   for (col.name in names(row)) {
-    cols[[col.name]][[idx]] <- row[[col.name]]
+    cols[[col.name]][colIdx] <- row[[col.name]]
   }
-  cols$respondent[[idx]] = resp.id;
+  flush(FALSE)
   idx <- idx + 1
 }
-df <- data.frame(cols)
-print("Writing dataframe")
-write_parquet(df, args[3])
-print("Written")
+flush(TRUE)
