@@ -30,7 +30,8 @@ glmFit <- function(df, link) {
     const_coef = coefs[[1,1]],
     zipf_coef = coefs[[2,1]],
     const_err = coefs[[1,2]],
-    zipf_err = coefs[[2,2]]
+    zipf_err = coefs[[2,2]],
+    aic = aic(fit)
   )
 }
 
@@ -38,9 +39,13 @@ betaBinFit <- function(df, link) {
   library(aod)
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
   maybePrintSummary(fit)
+  coefs  <- coef(summary(fit))
   c(
-    const_coef = fit[["coef.(Intercept)"]],
-    zipf_coef = fit[["coef.zipf"]]
+    const_coef = coefs[[1,1]],
+    zipf_coef = coefs[[2,1]],
+    const_err = coefs[[1,2]],
+    zipf_err = coefs[[2,2]],
+    aic = aic(fit)
   )
 }
 
@@ -53,9 +58,13 @@ glmmTmbFit <- function(df, link) {
     ziformula=~1,
   )
   maybePrintSummary(fit)
+  coefs  <- coef(summary(fit))
   c(
-    const_coef = fit[["coef.(Intercept)"]],
-    zipf_coef = fit[["coef.zipf"]]
+    const_coef = coefs[[1,1]],
+    zipf_coef = coefs[[2,1]],
+    const_err = coefs[[1,2]],
+    zipf_err = coefs[[2,2]],
+    aic = aic(fit)
   )
 }
 
@@ -87,9 +96,13 @@ regressors <- c(
       save.dir="glmmadmb"
     )
     maybePrintSummary(fit)
+    coefs  <- coef(summary(fit))
     c(
-      const_coef = fit[["coef.(Intercept)"]],
-      zipf_coef = fit[["coef.zipf"]]
+      const_coef = coefs[[1,1]],
+      zipf_coef = coefs[[2,1]],
+      const_err = coefs[[1,2]],
+      zipf_err = coefs[[2,2]],
+      aic = aic(fit)
     )
   },
   glmmTmbLogit = function(df) {
@@ -104,9 +117,13 @@ regressors <- c(
   vglm = function(df) {
     fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df, trace = TRUE)
     maybePrintSummary(fit)
+    coefs  <- coef(summary(fit))
     c(
-      const_coef = fit[["coef.(Intercept)"]],
-      zipf_coef = fit[["coef.zipf"]]
+      const_coef = coefs[[1,1]],
+      zipf_coef = coefs[[2,1]],
+      const_err = coefs[[1,2]],
+      zipf_err = coefs[[2,2]],
+      aic = aic(fit)
     )
   }
 )
