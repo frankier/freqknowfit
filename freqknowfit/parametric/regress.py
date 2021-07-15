@@ -1,6 +1,14 @@
+import os
 import click
 from functools import partial
 import pandas
+from os.path import join as pjoin
+import warnings
+
+
+def maybe_print_summary(fit):
+    if os.environ.get("PRINT_SUMMARIES"):
+        print(fit.summary())
 
 
 def fit_statsmodels(df_resp, link):
@@ -10,20 +18,25 @@ def fit_statsmodels(df_resp, link):
     from statsmodels.tools.tools import add_constant
 
     if link == "logit":
-        link_func = L.logit
+        link_func = L.logit()
     elif link == "probit":
-        link_func = L.probit
+        link_func = L.probit()
     elif link == "cloglog":
-        link_func = L.cloglog
+        link_func = L.cloglog()
     else:
         assert False
 
-    model = GLM(
-        df_resp["known"],
-        add_constant(df_resp["zipf"]),
-        family=Binomial(link=link_func)
-    ).fit()
-    print(model.summary())
+    with warnings.catch_warnings():
+        # TODO: Fixed in next statsmodels release
+        # FutureWarning: In a future version of pandas all arguments of concat
+        # except for the argument 'objs' will be keyword-only
+        warnings.simplefilter("ignore")
+        model = GLM(
+            df_resp["known"],
+            add_constant(df_resp["zipf"]),
+            family=Binomial(link=link_func)
+        ).fit()
+    maybe_print_summary(model)
     return {
         "const_coef": model.params[0],
         "zipf_coef": model.params[1],
@@ -55,7 +68,8 @@ def main(method, dfin, dfout):
     idx1 = 1
     grouped = df.groupby("respondent")
     for respondent, resp_df in grouped:
-        print(f"Regressing respondent {respondent} [{idx1} / {len(grouped)}]")
+        if os.environ.get("PRINT_PROGRESS"):
+            print(f"Regressing respondent {respondent} [{idx1} / {len(grouped)}]")
         row = fit(resp_df)
         if cols is None:
             cols = {k: [] for k in row}
@@ -65,7 +79,9 @@ def main(method, dfin, dfout):
         cols["respondent"].append(respondent)
         idx1 += 1
     print("Writing dataframe")
-    pandas.DataFrame(cols).to_parquet(dfout)
+    os.makedirs(dfout, exist_ok=True)
+    full_out = pjoin(dfout, "00000001.parquet")
+    pandas.DataFrame(cols).to_parquet(full_out)
     print("Written")
 
 
