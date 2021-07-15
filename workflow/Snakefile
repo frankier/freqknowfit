@@ -18,7 +18,9 @@ MODELS = {
     "glmCloglog": "R",
     "aodBetabinLogit": "R",
     "aodBetabinCloglog": "R",
-    "glmmadmb": "R",
+    # Cannot handle 
+    # matrix bound exceeded -- row index too high in dmatrix::operator()
+    # "glmmadmb": "R",
     "glmmTmbLogit": "R",
     "glmmTmbProbit": "R",
     "glmmTmbCloglog": "R",
@@ -54,7 +56,7 @@ rule fit_model:
     input:
         lambda wc: pjoin(VOCABAQDATA_WORK, DATASETS[wc.dataset])
     output:
-        pjoin(WORK, f"{paramspace.wildcard_pattern}.parquet")
+        pjoin(WORK, f"{paramspace.wildcard_pattern}.parquets")
     params:
         r_script = srcdir("../freqknowfit/parametric/regress.R")
     run:
