@@ -31,28 +31,34 @@ glmFit <- function(df, link) {
     zipf_coef = coefs[[2,1]],
     const_err = coefs[[1,2]],
     zipf_err = coefs[[2,2]],
-    aic = aic(fit)
+    aic = AIC(fit)
   )
 }
 
 betaBinFit <- function(df, link) {
   library(aod)
-  fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=df, link=link)
+  fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=as.data.frame(df), link=link)
   maybePrintSummary(fit)
-  coefs  <- coef(summary(fit))
+  sumFit <- summary(fit)
+  coefs <- sumFit@Coef
+  phi <- sumFit@Phi
+  aic <- AIC(fit)
   c(
     const_coef = coefs[[1,1]],
     zipf_coef = coefs[[2,1]],
+    phi_coef = phi[[1,1]],
     const_err = coefs[[1,2]],
     zipf_err = coefs[[2,2]],
-    aic = aic(fit)
+    phi_err = phi[[1,2]],
+    aic = aic@istats[[1, 1]],
+    aic_c = aic@istats[[1, 2]]
   )
 }
 
 glmmTmbFit <- function(df, link) {
   library(glmmTMB)
   fit <- glmmTMB(
-    unknown ~ zipf,
+    known ~ zipf,
     data=df,
     family=binomial(link=link),
     ziformula=~1,
@@ -60,11 +66,13 @@ glmmTmbFit <- function(df, link) {
   maybePrintSummary(fit)
   coefs  <- coef(summary(fit))
   c(
-    const_coef = coefs[[1,1]],
-    zipf_coef = coefs[[2,1]],
-    const_err = coefs[[1,2]],
-    zipf_err = coefs[[2,2]],
-    aic = aic(fit)
+    const_coef = coefs$cond[[1,1]],
+    zipf_coef = coefs$cond[[2,1]],
+    zi_coef = coefs$zi[[1,1]],
+    const_err = coefs$cond[[1,2]],
+    zipf_err = coefs$cond[[2,2]],
+    zi_err = coefs$zi[[1,2]],
+    aic = AIC(fit)
   )
 }
 
@@ -88,7 +96,7 @@ regressors <- c(
     library(glmmADMB)
 
     fit <- glmmadmb(
-      unknown ~ zipf,
+      known ~ zipf,
       data=df,
       zeroInflation=TRUE,
       family="binomial",
@@ -102,7 +110,7 @@ regressors <- c(
       zipf_coef = coefs[[2,1]],
       const_err = coefs[[1,2]],
       zipf_err = coefs[[2,2]],
-      aic = aic(fit)
+      aic = AIC(fit)
     )
   },
   glmmTmbLogit = function(df) {
@@ -115,7 +123,7 @@ regressors <- c(
     glmmTmbFit(df, "cloglog")
   },
   vglm = function(df) {
-    fit <- vglm(cbind(unknown, known) ~ zipf, zibinomialff, data = df, trace = TRUE)
+    fit <- vglm(cbind(known, unknown) ~ zipf, zibinomialff, data = df, trace = TRUE)
     maybePrintSummary(fit)
     coefs  <- coef(summary(fit))
     c(
@@ -123,7 +131,7 @@ regressors <- c(
       zipf_coef = coefs[[2,1]],
       const_err = coefs[[1,2]],
       zipf_err = coefs[[2,2]],
-      aic = aic(fit)
+      aic = AIC(fit)
     )
   }
 )
