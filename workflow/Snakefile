@@ -21,9 +21,11 @@ MODELS = {
     # Cannot handle 
     # matrix bound exceeded -- row index too high in dmatrix::operator()
     # "glmmadmb": "R",
-    "glmmTmbLogit": "R",
-    "glmmTmbProbit": "R",
-    "glmmTmbCloglog": "R",
+    # Very slow. Nothing produced on ECP after 5 hours.
+    # TODO: See if we can limit this to some datasets
+    #"glmmTmbLogit": "R",
+    #"glmmTmbProbit": "R",
+    #"glmmTmbCloglog": "R",
     "vglm": "R",
     "statsmodelsGlmLogit": "py",
     "statsmodelsGlmProbit": "py",
@@ -37,7 +39,7 @@ DATASETS = {
     "spalex": "spalex.inventory.enriched.parquet",
     "elp": "elp.inventory.enriched.parquet",
     "ecp": "ecp.inventory.enriched.parquet",
-    }
+}
 
 df = pandas.merge(
     pandas.DataFrame({"model": MODELS.keys()}),
