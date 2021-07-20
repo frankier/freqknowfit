@@ -12,7 +12,8 @@ def main(measure, treat1, treat2):
     aics1 = df1[measure].to_numpy()
     aics2 = df2[measure].to_numpy()
     if len(aics1) != len(aics2):
-        # WARN
+        print(f"WARNING: Lengths of treat1 and treat2 differ ({len(aics1)} vs {len(aics2)})")
+        print("Truncating to shortest")
         trunk_len = min(len(aics1), len(aics2))
         aics1 = aics1[:trunk_len]
         aics2 = aics2[:trunk_len]
