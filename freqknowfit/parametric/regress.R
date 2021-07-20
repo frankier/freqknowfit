@@ -1,5 +1,16 @@
 CHUNK_SIZE <- 65536
 
+printStacktrace <- function() {
+  calls <- sys.calls()
+  if (length(calls) >= 2L) {
+    cat("Backtrace:\n")
+    calls <- rev(calls[-length(calls)])
+    for (i in seq_along(calls)) {
+      cat(i, ": ", deparse(calls[[i]], nlines = 1L), "\n", sep = "")
+    }
+  }
+}
+
 options(error = function() {
   calls <- sys.calls()
   if (length(calls) >= 2L) {
@@ -10,6 +21,9 @@ options(error = function() {
     for (i in seq_along(calls)) {
       cat(i, ": ", deparse(calls[[i]], nlines = 1L), "\n", sep = "")
     }
+  }
+  if (nzchar(Sys.getenv("DEBUG_R_ERRORS"))) {
+    recover()
   }
   if (!interactive()) {
     q(status = 1)
@@ -39,19 +53,40 @@ betaBinFit <- function(df, link) {
   library(aod)
   fit <- betabin(formula = cbind(known, !known) ~ zipf, random = ~ 1, data=as.data.frame(df), link=link)
   maybePrintSummary(fit)
-  sumFit <- summary(fit)
-  coefs <- sumFit@Coef
-  phi <- sumFit@Phi
-  aic <- AIC(fit)
-  c(
-    const_coef = coefs[[1,1]],
-    zipf_coef = coefs[[2,1]],
-    phi_coef = phi[[1,1]],
-    const_err = coefs[[1,2]],
-    zipf_err = coefs[[2,2]],
-    phi_err = phi[[1,2]],
-    aic = aic@istats[[1, 1]],
-    aic_c = aic@istats[[1, 2]]
+  tryCatch(
+    {
+      sumFit <- summary(fit)
+      coefs <- sumFit@Coef
+      phi <- sumFit@Phi
+      aic <- AIC(fit)
+      c(
+        const_coef = coefs[[1,1]],
+        zipf_coef = coefs[[2,1]],
+        phi_coef = phi[[1,1]],
+        const_err = coefs[[1,2]],
+        zipf_err = coefs[[2,2]],
+        phi_err = phi[[1,2]],
+        aic = aic@istats[[1, 1]],
+        aic_c = aic@istats[[1, 2]]
+      )
+    },
+    error=function(cond) {
+      sink(stderr())
+      message("Error while getting results from of betabin(...)")
+      message(cond)
+      printStacktrace()
+      sink(NULL)
+      c(
+        const_coef = NaN,
+        zipf_coef = NaN,
+        phi_coef = NaN,
+        const_err = NaN,
+        zipf_err = NaN,
+        phi_err = NaN,
+        aic = NaN,
+        aic_c = NaN
+      )
+    }
   )
 }
 
