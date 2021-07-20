@@ -4,6 +4,7 @@ from functools import partial
 import pandas
 from os.path import join as pjoin
 import warnings
+from math import nan
 
 
 def maybe_print_summary(fit):
@@ -16,6 +17,8 @@ def fit_statsmodels(df_resp, link):
     from statsmodels.genmod.families import Binomial
     from statsmodels.genmod.generalized_linear_model import GLM
     from statsmodels.tools.tools import add_constant
+    from statsmodels.tools.sm_exceptions import PerfectSeparationError
+    from statsmodels.tools.eval_measures import aicc
 
     if link == "logit":
         link_func = L.logit()
@@ -31,11 +34,24 @@ def fit_statsmodels(df_resp, link):
         # FutureWarning: In a future version of pandas all arguments of concat
         # except for the argument 'objs' will be keyword-only
         warnings.simplefilter("ignore")
-        model = GLM(
-            df_resp["known"],
-            add_constant(df_resp["zipf"]),
-            family=Binomial(link=link_func)
-        ).fit()
+        try:
+            model = GLM(
+                df_resp["known"],
+                add_constant(df_resp["zipf"]),
+                family=Binomial(link=link_func)
+            ).fit()
+        except PerfectSeparationError:
+            return {
+                "const_coef": nan,
+                "zipf_coef": nan,
+                "const_err": nan,
+                "zipf_err": nan,
+                "aic": nan,
+                "aic_c": nan,
+                "bic_deviance": nan,
+                "bic_llf": nan,
+            }
+
     maybe_print_summary(model)
     return {
         "const_coef": model.params[0],
@@ -43,6 +59,8 @@ def fit_statsmodels(df_resp, link):
         "const_err": model.bse[0],
         "zipf_err": model.bse[1],
         "aic": model.aic,
+        # XXX: Does df_model include the constant? Is it the same as df_modelwc?
+        "aic_c": aicc(model.llf, model.nobs, model.df_model),
         "bic_deviance": model.bic_deviance,
         "bic_llf": model.bic_llf,
     }
