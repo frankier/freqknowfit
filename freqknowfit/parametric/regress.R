@@ -66,8 +66,8 @@ betaBinFit <- function(df, link) {
         const_err = coefs[[1,2]],
         zipf_err = coefs[[2,2]],
         phi_err = phi[[1,2]],
-        aic = aic@istats[[1, 1]],
-        aic_c = aic@istats[[1, 2]]
+        aic = aic@istats$AIC[[1]],
+        aic_c = aic@istats$AICc[[1]]
       )
     },
     error=function(cond) {
