@@ -51,14 +51,14 @@ paramspace = Paramspace(df)
 
 rule all:
     input:
-        expand(pjoin(WORK, "{params}.parquet"), params=paramspace.instance_patterns)
+        expand(pjoin(WORK, "{params}.parquets"), params=paramspace.instance_patterns)
 
 
 rule fit_model:
     input:
         lambda wc: pjoin(VOCABAQDATA_WORK, DATASETS[wc.dataset])
     output:
-        pjoin(WORK, f"{paramspace.wildcard_pattern}.parquets")
+        directory(pjoin(WORK, f"{paramspace.wildcard_pattern}.parquets"))
     params:
         r_script = srcdir("../freqknowfit/parametric/regress.R")
     run:
