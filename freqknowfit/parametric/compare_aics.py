@@ -1,5 +1,11 @@
 import click
 import pandas
+import numpy
+
+
+def nan_info(treatment, aics):
+    nan_count = numpy.count_nonzero(numpy.isnan(aics))
+    print(f"Treatment {treatment} NaNs: {nan_count}; {nan_count/len(aics)}")
 
 
 @click.command()
@@ -17,8 +23,10 @@ def main(measure, treat1, treat2):
         trunk_len = min(len(aics1), len(aics2))
         aics1 = aics1[:trunk_len]
         aics2 = aics2[:trunk_len]
-    print("Treatment 1 better {:.2f}".format(100 * (aics1 > aics2).mean()))
-    print("Treatment 2 better {:.2f}".format(100 * (aics2 > aics1).mean()))
+    nan_info(1, aics1)
+    nan_info(2, aics2)
+    print("Treatment 1 has lower AIC {:.2f}".format(100 * (aics1 < aics2).mean()))
+    print("Treatment 2 has lower AIC {:.2f}".format(100 * (aics2 < aics1).mean()))
 
 
 if __name__ == "__main__":
