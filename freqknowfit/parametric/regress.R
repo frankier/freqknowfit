@@ -168,10 +168,12 @@ regressors <- c(
     glmmTmbFit(df, "cloglog")
   },
   vglm = function(df) {
+    # Broken
     library(VGAM)
     tryCatch(
       {
-        fit <- vglm(cbind(known, unknown) ~ zipf, zibinomialff, data = df, trace = TRUE)
+        fit <- vglm(cbind(known, unknown) ~ zipf, zibinomialff, data = df,
+                    trace = TRUE)
         maybePrintSummary(fit)
         coefs  <- coef(summary(fit))
         c(
