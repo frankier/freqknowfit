@@ -103,7 +103,7 @@ betaBinFit <- function(df, link) {
 glmmTmbFit <- function(df, link) {
   library(glmmTMB)
   fit <- glmmTMB(
-    known ~ zipf,
+    cbind(unknown, known) ~ zipf,
     data=df,
     family=binomial(link=link),
     ziformula=~1,
