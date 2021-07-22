@@ -18,7 +18,6 @@ class NonParametricEstimator:
     def __init__(self, df, x, y):
         known_mask = df[y]
         self.known_count = known_mask.sum()
-        print("y", y, known_mask)
         known_zipfs = df[known_mask][x].to_numpy()
         self.kde_known = KDEUnivariate(known_zipfs)
         self.kde_known.fit()
