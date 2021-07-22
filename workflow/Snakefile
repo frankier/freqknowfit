@@ -16,36 +16,46 @@ MODELS = {
     "glmLogit": "R",
     "glmProbit": "R",
     "glmCloglog": "R",
-    "aodBetabinLogit": "R",
-    "aodBetabinCloglog": "R",
+    # Doesn't make sense -- only useful for actual binomial not bernouli
+    #"aodBetabinLogit": "R",
+    #"aodBetabinCloglog": "R",
     # Cannot handle 
     # matrix bound exceeded -- row index too high in dmatrix::operator()
     # "glmmadmb": "R",
-    # Very slow. Nothing produced on ECP after 5 hours.
-    # TODO: See if we can limit this to some datasets
-    #"glmmTmbLogit": "R",
-    #"glmmTmbProbit": "R",
-    #"glmmTmbCloglog": "R",
-    "vglm": "R",
+    "glmmTmbLogit": "R",
+    "glmmTmbProbit": "R",
+    "glmmTmbCloglog": "R",
+    # Completely broken
+    # Error while fitting vglm(...)
+    # NA/NaN/Inf in 'y'
+    #"vglm": "R",
     "statsmodelsGlmLogit": "py",
     "statsmodelsGlmProbit": "py",
     "statsmodelsGlmCloglog": "py",
 }
 
+
 DATASETS = {
     "blp": "blp.inventory.enriched.parquet",
-    "svl12k": "svl12k.enriched.parquet",
+    "dcp": "dcp.inventory.enriched.parquet",
+    "dlp": "dlp.inventory.enriched.parquet",
+    "dlp2": "dlp2.inventory.enriched.parquet",
+    "ecp": "ecp.inventory.enriched.parquet",
+    "elp": "elp.inventory.enriched.parquet",
     "flp": "flp.inventory.enriched.parquet",
     "spalex": "spalex.inventory.enriched.parquet",
-    "elp": "elp.inventory.enriched.parquet",
-    "ecp": "ecp.inventory.enriched.parquet",
+    "svl12k": "svl12k.enriched.parquet",
 }
+
+SMALL_DATASETS = ["blp", "elp", "flp", "dlp", "dlp2"]
+SMALL_DATASET_MODELS = ["glmmTmbLogit", "glmmTmbProbit", "glmmTmbCloglog"]
 
 df = pandas.merge(
     pandas.DataFrame({"model": MODELS.keys()}),
     pandas.DataFrame({"dataset": DATASETS.keys()}),
     how="cross"
 )
+df.drop(df[df["model"].isin(SMALL_DATASET_MODELS) & ~df["dataset"].isin(SMALL_DATASETS)].index, inplace=True)
 paramspace = Paramspace(df)
 
 
