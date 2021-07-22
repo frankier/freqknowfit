@@ -40,13 +40,23 @@ glmFit <- function(df, link) {
   fit <- glm(known ~ zipf, data=df, family=binomial(link=link))
   maybePrintSummary(fit)
   coefs  <- coef(summary(fit))
-  c(
-    const_coef = coefs[[1,1]],
-    zipf_coef = coefs[[2,1]],
-    const_err = coefs[[1,2]],
-    zipf_err = coefs[[2,2]],
-    aic = AIC(fit)
-  )
+  if (dim(coefs)[[1]] < 2) {
+    c(
+      const_coef = NaN,
+      zipf_coef = NaN,
+      const_err = NaN,
+      zipf_err = NaN,
+      aic = NaN
+    )
+  } else {
+    c(
+      const_coef = coefs[[1,1]],
+      zipf_coef = coefs[[2,1]],
+      const_err = coefs[[1,2]],
+      zipf_err = coefs[[2,2]],
+      aic = AIC(fit)
+    )
+  }
 }
 
 betaBinFit <- function(df, link) {
