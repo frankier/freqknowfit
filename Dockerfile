@@ -19,7 +19,7 @@ WORKDIR /freqknowfit/
 ENV LANG='C.UTF-8' LC_ALL='C.UTF-8'
 
 RUN LIBARROW_MINIMAL=false \
-    R -e 'install.packages(c("aod", "devtools", "arrow", "VGAM", "AICcmodavg"))' && \
+    R -e 'install.packages(c("aod", "devtools", "arrow", "VGAM", "AICcmodavg", "pscl"))' && \
     R -e 'install.packages("R2admb")' && \
     R -e 'install.packages("glmmADMB", repos=c("http://glmmadmb.r-forge.r-project.org/repos", getOption("repos")), type="source")' && \
     R -e 'devtools::install_github("glmmTMB/glmmTMB/glmmTMB")'
