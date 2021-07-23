@@ -7,6 +7,18 @@ import warnings
 from math import nan
 
 
+STATSMODELS_NANS = {
+    "const_coef": nan,
+    "zipf_coef": nan,
+    "const_err": nan,
+    "zipf_err": nan,
+    "aic": nan,
+    "aic_c": nan,
+    "bic_deviance": nan,
+    "bic_llf": nan,
+}
+
+
 def maybe_print_summary(fit):
     if os.environ.get("PRINT_SUMMARIES"):
         print(fit.summary())
@@ -41,18 +53,12 @@ def fit_statsmodels(df_resp, link):
                 family=Binomial(link=link_func)
             ).fit()
         except PerfectSeparationError:
-            return {
-                "const_coef": nan,
-                "zipf_coef": nan,
-                "const_err": nan,
-                "zipf_err": nan,
-                "aic": nan,
-                "aic_c": nan,
-                "bic_deviance": nan,
-                "bic_llf": nan,
-            }
+            return STATSMODELS_NANS
 
     maybe_print_summary(model)
+    if len(model.params) < 2:
+        return STATSMODELS_NANS
+
     return {
         "const_coef": model.params[0],
         "zipf_coef": model.params[1],
