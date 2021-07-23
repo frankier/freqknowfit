@@ -102,22 +102,42 @@ betaBinFit <- function(df, link) {
 
 glmmTmbFit <- function(df, link) {
   library(glmmTMB)
-  fit <- glmmTMB(
-    cbind(unknown, known) ~ zipf,
-    data=df,
-    family=binomial(link=link),
-    ziformula=~1,
-  )
-  maybePrintSummary(fit)
-  coefs  <- coef(summary(fit))
-  c(
-    const_coef = coefs$cond[[1,1]],
-    zipf_coef = coefs$cond[[2,1]],
-    zi_coef = coefs$zi[[1,1]],
-    const_err = coefs$cond[[1,2]],
-    zipf_err = coefs$cond[[2,2]],
-    zi_err = coefs$zi[[1,2]],
-    aic = AIC(fit)
+  tryCatch(
+    {
+      fit <- glmmTMB(
+        cbind(unknown, known) ~ zipf,
+        data=df,
+        family=binomial(link=link),
+        ziformula=~1,
+      )
+      maybePrintSummary(fit)
+      coefs  <- coef(summary(fit))
+      c(
+        const_coef = coefs$cond[[1,1]],
+        zipf_coef = coefs$cond[[2,1]],
+        zi_coef = coefs$zi[[1,1]],
+        const_err = coefs$cond[[1,2]],
+        zipf_err = coefs$cond[[2,2]],
+        zi_err = coefs$zi[[1,2]],
+        aic = AIC(fit)
+      )
+    },
+    error=function(cond) {
+      c(
+        sink(stderr())
+        message("Error while getting results from glmmTMB(...)")
+        message(cond)
+        printStacktrace()
+        sink(NULL)
+        const_coef = coefs$cond[[1,1]],
+        zipf_coef = coefs$cond[[2,1]],
+        zi_coef = coefs$zi[[1,1]],
+        const_err = coefs$cond[[1,2]],
+        zipf_err = coefs$cond[[2,2]],
+        zi_err = coefs$zi[[1,2]],
+        aic = AIC(fit)
+      )
+    }
   )
 }
 
