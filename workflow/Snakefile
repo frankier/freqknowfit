@@ -1,6 +1,7 @@
 from snakemake.utils import Paramspace
 import pandas
 from os.path import join as pjoin
+from os import chdir
 
 
 def cnf(name, val):
@@ -76,6 +77,8 @@ rule fit_model:
         from os import makedirs
         from os.path import dirname
         makedirs(dirname(output[0]), exist_ok=True)
+
+        chdir(srcdir(".."))
 
         if MODELS[wildcards.model] == "R":
             prog = "Rscript " + params.r_script
