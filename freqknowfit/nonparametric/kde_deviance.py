@@ -4,6 +4,7 @@ import numpy
 from scipy.integrate import trapezoid
 
 from .nonparametric import NonParametricEstimator
+from .utils import IterFittedResps
 
 
 SAMPLES = numpy.linspace(0, 7, 1000)
@@ -17,12 +18,8 @@ def logistic(m, c):
 @click.argument("dfin", type=click.Path(exists=True))
 @click.argument("fitin", type=click.Path(exists=True))
 def main(dfin, fitin):
-    df = pandas.read_parquet(dfin)
-    fit_df = pandas.read_parquet(fitin)
-    groups = df.groupby("respondent")
     cols = {"respondent": [], "mae": [], "mse": [], "weighted_mae": [], "weighted_mse": []}
-    for resp_idx, df_resp in groups:
-        fit_row = fit_df[fit_df["respondent"] == str(resp_idx)]
+    for resp_idx, df_resp, fit_row in IterFittedResps(dfin, fitin):
         predictions = logistic(fit_row["zipf_coef"].to_numpy(), fit_row["const_coef"].to_numpy())
         nonparametric_est = NonParametricEstimator(df_resp, "zipf", "known")
         nonparametric_eval = nonparametric_est.evaluate(SAMPLES)
