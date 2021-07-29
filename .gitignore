@@ -2,3 +2,5 @@
 /.direnv/
 /.envrc
 /.snakemake/
+*.o
+*.so

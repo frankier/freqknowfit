@@ -1,3 +1,6 @@
+library(here)
+here::i_am("freqknowfit/parametric/regress.R")
+
 CHUNK_SIZE <- 65536
 
 printStacktrace <- function() {
@@ -10,6 +13,7 @@ printStacktrace <- function() {
     }
   }
 }
+
 
 options(error = function() {
   calls <- sys.calls()
@@ -34,6 +38,11 @@ maybePrintSummary <- function(fit) {
   if (nzchar(Sys.getenv("PRINT_SUMMARIES"))) {
     print(summary(fit))
   }
+}
+
+add_computed <- function(res) {
+  res["theta"] <- -res["const_coef"] / res["zipf_coef"]
+  res
 }
 
 glmFit <- function(df, link) {
@@ -123,19 +132,19 @@ glmmTmbFit <- function(df, link) {
       )
     },
     error=function(cond) {
+      sink(stderr())
+      message("Error while getting results from glmmTMB(...)")
+      message(cond)
+      printStacktrace()
+      sink(NULL)
       c(
-        sink(stderr())
-        message("Error while getting results from glmmTMB(...)")
-        message(cond)
-        printStacktrace()
-        sink(NULL)
-        const_coef = coefs$cond[[1,1]],
-        zipf_coef = coefs$cond[[2,1]],
-        zi_coef = coefs$zi[[1,1]],
-        const_err = coefs$cond[[1,2]],
-        zipf_err = coefs$cond[[2,2]],
-        zi_err = coefs$zi[[1,2]],
-        aic = AIC(fit)
+        const_coef = NaN,
+        zipf_coef = NaN,
+        zi_coef = NaN,
+        const_err = NaN,
+        zipf_err = NaN,
+        zi_err = NaN,
+        aic = NaN
       )
     }
   )
@@ -219,6 +228,50 @@ regressors <- c(
         )
       }
     )
+  },
+  tmbOi = function(df) {
+    if (!exists("tmb_oi_init")) {
+      source(here("freqknowfit/parametric/tmb_oi/reg.R"), chdir=TRUE)
+    }
+    fit <- glm(known ~ zipf, data=df, family=binomial(link="logit"))
+    maybePrintSummary(fit)
+    coefs  <- coef(summary(fit))
+    if (dim(coefs)[[1]] < 2) {
+      c(
+        const_coef = NaN,
+        zipf_coef = NaN,
+        phi_coef = NaN,
+        aic = NaN
+      )
+    } else {
+      initial_const_coef <- coefs[[1,1]]
+      initial_zipf_coef <- coefs[[2,1]]
+      # y = mx + c, max entropy when y = 0 => x = -c / m
+      theta <- -initial_const_coef / initial_zipf_coef
+      if (initial_zipf_coef > 0) {
+        if (theta < 1) {
+          theta <- 1;
+        }
+        initial_oi_prob <- mean(df$known[df$zipf < theta])
+      } else {
+        initial_oi_prob <- mean(df$known[df$zipf > theta])
+      }
+      initial_oi <- qlogis(initial_oi_prob)
+      print(c(
+        initial_const_coef=initial_const_coef,
+        initial_zipf_coef=initial_zipf_coef,
+        initial_oi_prob=initial_oi_prob,
+        initial_oi=initial_oi
+      ))
+      opt <- fit_tmb_oi(df$zipf, df$known, initial_oi, initial_const_coef, initial_zipf_coef)
+      coef <- opt$par
+      c(
+        const_coef = coef[["reg_const_coef"]],
+        zipf_coef = coef[["reg_zipf_coef"]],
+        phi_coef = coef[["inflate_coef"]],
+        aic = 2 * 3 + 2 * opt$value
+      )
+    }
   }
 )
 
@@ -263,6 +316,7 @@ for (resp.id in names(resp.dfs)) {
   }
   resp.df <- resp.dfs[[resp.id]]
   row <- regressor(resp.df)
+  row <- add_computed(row)
   if (is.null(cols)) {
     cols = list(respondent=rep("", CHUNK_SIZE))
     for (col.name in names(row)) {

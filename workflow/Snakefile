@@ -25,6 +25,7 @@ MODELS = {
     "glmmTmbLogit": "R",
     "glmmTmbProbit": "R",
     "glmmTmbCloglog": "R",
+    "tmbOi": "R",
     # Completely broken
     # Error while fitting vglm(...)
     # NA/NaN/Inf in 'y'
