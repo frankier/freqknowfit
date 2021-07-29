@@ -67,3 +67,9 @@ def fit_offset_logit(x, y):
         print("loss", train_loss)
 
     return model
+
+
+def print_model(model):
+    print("Weight", model.linear.weight.detach())
+    print("Bias", model.linear.bias.detach())
+    print("Background", model.sigmoid(model.offset.detach()))
