@@ -1,10 +1,13 @@
 import os
+import numpy
 import click
 from functools import partial
 import pandas
 from os.path import join as pjoin
 import warnings
 from math import nan
+from os.path import exists
+from string import Template
 
 
 STATSMODELS_NANS = {
@@ -72,10 +75,160 @@ def fit_statsmodels(df_resp, link):
     }
 
 
+STAN_MODEL = Template("""
+functions {
+    int num_zeros(int[] y) {
+        int sum = 0;
+        for (n in 1:size(y))
+            sum += (y[n] == 0);
+        return sum;
+    }
+}
+
+data {
+    int<lower=0> N;
+    int<lower=0> K;
+    matrix[N, K] x;
+    int<lower=0> y[N];
+}
+
+transformed data {
+    int<lower = 0> N_zero = num_zeros(y);
+    int<lower = 0> N_ones = N - N_zero;
+}
+
+parameters {
+    real inflate_coef;
+    vector[K] reg_coef;
+}
+
+transformed parameters {
+    real inflate_mags;
+    vector[N] reg_mags;
+    inflate_mags = inv_logit(inflate_coef);
+    reg_mags =  $REG_LINK(x * reg_coef);
+}
+
+model {
+    inflate_coef ~ normal(0, 1);
+    reg_coef ~ normal(0, 1);
+    for (n in 1:N){
+        if (y[n] == 1) {
+            target += log_sum_exp(
+                bernoulli_lpmf(1 | inflate_mags),
+                bernoulli_lpmf(0 | inflate_mags)
+                + bernoulli_lpmf(1 | reg_mags[n])
+            );
+        } else {
+            target += (
+                bernoulli_lpmf(0 | inflate_mags)
+                + bernoulli_lpmf(0 | reg_mags[n])
+            );
+        }
+    }
+}
+
+generated quantities {
+    real log_lik[N];
+    for (n in 1:N){
+        if (y[n] == 1) {
+            log_lik[n] = log_sum_exp(
+                bernoulli_lpmf(1 | inflate_mags),
+                bernoulli_lpmf(0 | inflate_mags)
+                + bernoulli_lpmf(1 | reg_mags[n])
+            );
+        } else {
+            log_lik[n] = (
+                bernoulli_lpmf(0 | inflate_mags)
+                + bernoulli_lpmf(0 | reg_mags[n])
+            );
+        }
+    }
+}
+""")
+
+
+STAN_LOGIT_MODEL = STAN_MODEL.substitute(REG_LINK="inv_logit")
+STAN_PROBIT_MODEL = STAN_MODEL.substitute(REG_LINK="Phi")
+STAN_CLOGLOG_MODEL = STAN_MODEL.substitute(REG_LINK="inv_cloglog")
+
+
+def get_model_path():
+    return os.environ.get("STAN_PROG_DIR", os.environ.get("TMPDIR", "/tmp"))
+
+
+def ensure_model_at_path(path, contents):
+    if exists(path):
+        with open(path, "r") as inf:
+            if inf.read() == contents:
+                return
+    with open(path, "w") as outf:
+        outf.write(contents)
+
+
+class SliceTaker:
+    def __init__(self, arr):
+        self.arr = arr
+        self.cursor = 0
+
+    def take(self, length):
+        res = self.arr[self.cursor: self.cursor + length]
+        self.cursor += length
+        return res
+
+    def drop(self, length):
+        self.cursor += length
+
+
+def fit_stan(df_resp, link):
+    from statsmodels.tools.tools import add_constant
+    from cmdstanpy import CmdStanModel
+
+    if link == "logit":
+        stan_code = STAN_LOGIT_MODEL
+    elif link == "probit":
+        stan_code = STAN_PROBIT_MODEL
+    elif link == "cloglog":
+        stan_code = STAN_CLOGLOG_MODEL
+    else:
+        assert False
+    full_path = pjoin(get_model_path(), link + ".stan")
+    ensure_model_at_path(full_path, stan_code)
+    model = CmdStanModel(link, full_path)
+    n = len(df_resp)
+    k = 2
+    mle = model.optimize({
+        "N": n,
+        "K": k,
+        "x": add_constant(df_resp["zipf"].to_numpy()),
+        "y": df_resp["known"].to_numpy().astype(numpy.int32),
+    })
+    taker = SliceTaker(mle.optimized_params_np)
+    lp = taker.take(1)[0]
+    inflate_coef = taker.take(1)[0]
+    reg_coef = taker.take(k)
+    # Drop reg_mags
+    taker.drop(n)
+    log_lik = taker.take(n)
+    sum_lok_lik = sum(log_lik)
+    num_params = k + 1
+    aic = 2 * num_params - 2 * sum_lok_lik
+
+    return {
+        "const_coef": reg_coef[0],
+        "zipf_coef": reg_coef[1],
+        "phi_coef": inflate_coef,
+        "aic": aic,
+    }
+
+
 METHODS = {
     "statsmodelsGlmLogit": partial(fit_statsmodels, link="logit"),
     "statsmodelsGlmProbit": partial(fit_statsmodels, link="probit"),
     "statsmodelsGlmCloglog": partial(fit_statsmodels, link="cloglog"),
+    "stanLogit": partial(fit_stan, link="logit"),
+    "stanProbit": partial(fit_stan, link="probit"),
+    "stanCloglog": partial(fit_stan, link="cloglog"),
 }
 
 
@@ -93,7 +246,9 @@ def main(method, dfin, dfout):
     grouped = df.groupby("respondent")
     for respondent, resp_df in grouped:
         if os.environ.get("PRINT_PROGRESS"):
-            print(f"Regressing respondent {respondent} [{idx1} / {len(grouped)}]")
+            print(
+                f"Regressing respondent {respondent} [{idx1} / {len(grouped)}]"
+            )
         row = fit(resp_df)
         if cols is None:
             cols = {k: [] for k in row}
