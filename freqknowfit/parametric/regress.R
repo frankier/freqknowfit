@@ -1,6 +1,5 @@
 library(here)
 library(arrow)
-library(R.utils)
 
 CHUNK_SIZE <- 65536
 
@@ -277,15 +276,18 @@ regressors <- c(
 )
 
 main <- function() {
+  # First canonicalise all arguments relative to the original working directory
   args <- commandArgs(trailingOnly = TRUE)
   regressorName <- args[1]
-  inParaquet <- getAbsolutePath(args[2])
-  outParquetsDir <- getAbsolutePath(args[3])
+  inParaquet <- R.utils::getAbsolutePath(args[2])
+  outParquetsDir <- R.utils::getAbsolutePath(args[3])
 
+  # Now change the working directory to the to the project root to set up the `here` library
   freqknowfit_base <- Sys.getenv("FREQKNOWFIT_BASE")
   if (nzchar(freqknowfit_base)) {
     setwd(freqknowfit_base)
   }
+  i_am("freqknowfit/parametric/regress.R")
 
   print("Loading dataframe")
   df <- read_parquet(inParaquet)
