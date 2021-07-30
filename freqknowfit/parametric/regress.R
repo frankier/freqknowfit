@@ -1,5 +1,6 @@
 library(here)
-here::i_am("freqknowfit/parametric/regress.R")
+library(arrow)
+library(R.utils)
 
 CHUNK_SIZE <- 65536
 
@@ -114,7 +115,7 @@ glmmTmbFit <- function(df, link) {
   tryCatch(
     {
       fit <- glmmTMB(
-        cbind(unknown, known) ~ zipf,
+        cbind(unk, known) ~ zipf,
         data=df,
         family=binomial(link=link),
         ziformula=~1,
@@ -201,7 +202,7 @@ regressors <- c(
     library(VGAM)
     tryCatch(
       {
-        fit <- vglm(cbind(known, unknown) ~ zipf, zibinomialff, data = df,
+        fit <- vglm(cbind(known, unk) ~ zipf, zibinomialff, data = df,
                     trace = TRUE)
         maybePrintSummary(fit)
         coefs  <- coef(summary(fit))
@@ -275,60 +276,72 @@ regressors <- c(
   }
 )
 
-library(arrow)
+main <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  regressorName <- args[1]
+  inParaquet <- getAbsolutePath(args[2])
+  outParquetsDir <- getAbsolutePath(args[3])
 
-print("Loading dataframe")
-args <- commandArgs(trailingOnly = TRUE)
-df <- read_parquet(args[2])
-resp.dfs <- split(df, df$respondent)
-print("Loaded!")
+  freqknowfit_base <- Sys.getenv("FREQKNOWFIT_BASE")
+  if (nzchar(freqknowfit_base)) {
+    setwd(freqknowfit_base)
+  }
 
-outParquetsDir <- args[3]
-dir.create(outParquetsDir, recursive = TRUE)
-regressor <- regressors[[args[1]]]
-chunk.idx <- 1
+  print("Loading dataframe")
+  df <- read_parquet(inParaquet)
+  resp.dfs <- split(df, df$respondent)
+  print("Loaded!")
 
-flush <- function(last) {
-  if (last) {
-    trueIdx = idx - 1
-  } else {
-    trueIdx = idx
-  }
-  chunkSize = trueIdx %% CHUNK_SIZE
-  shouldFlush <- (last && (chunkSize > 0)) || chunkSize == 0
-  if (!shouldFlush) {
-    return()
-  }
-  outPath <- file.path(outParquetsDir, sprintf("%08d.parquet", chunk.idx))
-  outDf <- do.call(data.frame, cols)
-  if (chunkSize > 0) {
-    outDf <- head(outDf, chunkSize)
-  }
-  write_parquet(x=outDf, sink=outPath)
-  chunk.idx <<- chunk.idx + 1
-}
+  dir.create(outParquetsDir, recursive = TRUE)
+  regressor <- regressors[[regressorName]]
+  chunk.idx <- 1
 
-cols <- NULL
-idx <- 1
-for (resp.id in names(resp.dfs)) {
-  if (nzchar(Sys.getenv("PRINT_PROGRESS"))) {
-    cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
-  }
-  resp.df <- resp.dfs[[resp.id]]
-  row <- regressor(resp.df)
-  row <- add_computed(row)
-  if (is.null(cols)) {
-    cols = list(respondent=rep("", CHUNK_SIZE))
-    for (col.name in names(row)) {
-      cols[[col.name]] = rep(row[[col.name]], CHUNK_SIZE)
+  flush <- function(last) {
+    if (last) {
+      trueIdx = idx - 1
+    } else {
+      trueIdx = idx
     }
+    chunkSize = trueIdx %% CHUNK_SIZE
+    shouldFlush <- (last && (chunkSize > 0)) || chunkSize == 0
+    if (!shouldFlush) {
+      return()
+    }
+    print("outParquetsDir")
+    print(outParquetsDir)
+    outPath <- file.path(outParquetsDir, sprintf("%08d.parquet", chunk.idx))
+    outDf <- do.call(data.frame, cols)
+    if (chunkSize > 0) {
+      outDf <- head(outDf, chunkSize)
+    }
+    write_parquet(x=outDf, sink=outPath)
+    chunk.idx <<- chunk.idx + 1
   }
-  colIdx = ((idx - 1) %% CHUNK_SIZE) + 1
-  cols$respondent[colIdx] = resp.id;
-  for (col.name in names(row)) {
-    cols[[col.name]][colIdx] <- row[[col.name]]
+
+  cols <- NULL
+  idx <- 1
+  for (resp.id in names(resp.dfs)) {
+    if (nzchar(Sys.getenv("PRINT_PROGRESS"))) {
+      cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
+    }
+    resp.df <- resp.dfs[[resp.id]]
+    row <- regressor(resp.df)
+    row <- add_computed(row)
+    if (is.null(cols)) {
+      cols = list(respondent=rep("", CHUNK_SIZE))
+      for (col.name in names(row)) {
+        cols[[col.name]] = rep(row[[col.name]], CHUNK_SIZE)
+      }
+    }
+    colIdx = ((idx - 1) %% CHUNK_SIZE) + 1
+    cols$respondent[colIdx] = resp.id;
+    for (col.name in names(row)) {
+      cols[[col.name]][colIdx] <- row[[col.name]]
+    }
+    flush(FALSE)
+    idx <- idx + 1
   }
-  flush(FALSE)
-  idx <- idx + 1
+  flush(TRUE)
 }
-flush(TRUE)
+
+main()

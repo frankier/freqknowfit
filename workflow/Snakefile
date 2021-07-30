@@ -72,13 +72,14 @@ rule fit_model:
     output:
         directory(pjoin(WORK, f"{paramspace.wildcard_pattern}.parquets"))
     params:
-        r_script = srcdir("../freqknowfit/parametric/regress.R")
+        r_script = srcdir("../freqknowfit/parametric/regress.R"),
+        base_dir = srcdir("..")
     run:
         from os import makedirs
         from os.path import dirname
         makedirs(dirname(output[0]), exist_ok=True)
 
-        chdir(srcdir(".."))
+        os.environ["FREQKNOWFIT_BASE"] = params.base_dir
 
         if MODELS[wildcards.model] == "R":
             prog = "Rscript " + params.r_script
