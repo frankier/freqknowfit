@@ -249,14 +249,18 @@ regressors <- c(
       # y = mx + c, max entropy when y = 0 => x = -c / m
       theta <- -initial_const_coef / initial_zipf_coef
       if (initial_zipf_coef > 0) {
-        if (theta < 1) {
-          theta <- 1;
-        }
-        initial_oi_prob <- mean(df$known[df$zipf < theta])
+        mask <- df$zipf < theta
       } else {
-        initial_oi_prob <- mean(df$known[df$zipf > theta])
+        mask <- df$zipf > theta
       }
-      initial_oi <- qlogis(initial_oi_prob)
+      num_samples <- sum(mask)
+      initial_oi_prob <- mean(df$known[mask])
+      if (num_samples < 5 || initial_oi_prob > 0.75) {
+        initial_oi_prob <- 0.5
+        initial_oi <- 0
+      } else {
+        initial_oi <- qlogis(initial_oi_prob)
+      }
       print(c(
         initial_const_coef=initial_const_coef,
         initial_zipf_coef=initial_zipf_coef,
