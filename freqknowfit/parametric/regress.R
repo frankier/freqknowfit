@@ -255,7 +255,7 @@ regressors <- c(
       }
       num_samples <- sum(mask)
       initial_oi_prob <- mean(df$known[mask])
-      if (num_samples < 5 || initial_oi_prob > 0.75) {
+      if (num_samples < 5 || initial_oi_prob > 0.75 || initial_oi_prob < 0.05) {
         initial_oi_prob <- 0.5
         initial_oi <- 0
       } else {
@@ -294,8 +294,25 @@ main <- function() {
   i_am("freqknowfit/parametric/regress.R")
 
   print("Loading dataframe")
-  df <- read_parquet(inParaquet)
-  resp.dfs <- split(df, df$respondent)
+  df <- read_parquet(inParaquet, as_data_frame=FALSE)
+  row <- 1
+  start_row <- 1
+
+  next_resp_df <- function() {
+    if (start_row > nrow(df)) {
+      return(NULL)
+    }
+    cur_respondent <- df$respondent[start_row]$as_vector()[[1]]
+    end_row <- start_row
+    while (df$respondent[end_row]$as_vector()[[1]] == cur_respondent) {
+      end_row <- end_row + 1
+    }
+    slice_end_row <- end_row-1
+    slice <- as.data.frame(df[start_row:slice_end_row, ])
+    start_row <<- end_row
+    return(list(respondent=cur_respondent, df=slice))
+  }
+
   print("Loaded!")
 
   dir.create(outParquetsDir, recursive = TRUE)
@@ -313,8 +330,6 @@ main <- function() {
     if (!shouldFlush) {
       return()
     }
-    print("outParquetsDir")
-    print(outParquetsDir)
     outPath <- file.path(outParquetsDir, sprintf("%08d.parquet", chunk.idx))
     outDf <- do.call(data.frame, cols)
     if (chunkSize > 0) {
@@ -326,12 +341,12 @@ main <- function() {
 
   cols <- NULL
   idx <- 1
-  for (resp.id in names(resp.dfs)) {
+  resp <- next_resp_df()
+  while (!is.null(resp)) {
     if (nzchar(Sys.getenv("PRINT_PROGRESS"))) {
-      cat("Regressing respondent ", resp.id, " [", idx, " / ", length(resp.dfs), "]\n")
+      cat("Regressing respondent ", resp["respondent"], " [", idx, "]\n")
     }
-    resp.df <- resp.dfs[[resp.id]]
-    row <- regressor(resp.df)
+    row <- regressor(resp[["df"]])
     row <- add_computed(row)
     if (is.null(cols)) {
       cols = list(respondent=rep("", CHUNK_SIZE))
@@ -339,13 +354,14 @@ main <- function() {
         cols[[col.name]] = rep(row[[col.name]], CHUNK_SIZE)
       }
     }
-    colIdx = ((idx - 1) %% CHUNK_SIZE) + 1
-    cols$respondent[colIdx] = resp.id;
+    colRowIdx = ((idx - 1) %% CHUNK_SIZE) + 1
+    cols$respondent[colRowIdx] = resp$respondent;
     for (col.name in names(row)) {
-      cols[[col.name]][colIdx] <- row[[col.name]]
+      cols[[col.name]][colRowIdx] <- row[[col.name]]
     }
     flush(FALSE)
     idx <- idx + 1
+    resp <- next_resp_df()
   }
   flush(TRUE)
 }
