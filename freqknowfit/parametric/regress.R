@@ -306,10 +306,10 @@ main <- function() {
     }
     cur_respondent <- df$respondent[start_row]$as_vector()[[1]]
     end_row <- start_row
-    while (df$respondent[end_row]$as_vector()[[1]] == cur_respondent) {
+    while ((end_row <= length(df$respondent)) && (df$respondent[end_row]$as_vector()[[1]] == cur_respondent)) {
       end_row <- end_row + 1
     }
-    slice_end_row <- end_row-1
+    slice_end_row <- end_row - 1
     slice <- as.data.frame(df[start_row:slice_end_row, ])
     start_row <<- end_row
     return(list(respondent=cur_respondent, df=slice))
