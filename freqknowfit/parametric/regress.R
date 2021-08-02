@@ -261,12 +261,14 @@ regressors <- c(
       } else {
         initial_oi <- qlogis(initial_oi_prob)
       }
-      print(c(
-        initial_const_coef=initial_const_coef,
-        initial_zipf_coef=initial_zipf_coef,
-        initial_oi_prob=initial_oi_prob,
-        initial_oi=initial_oi
-      ))
+      if (nzchar(Sys.getenv("PRINT_SUMMARIES"))) {
+        print(c(
+          initial_const_coef=initial_const_coef,
+          initial_zipf_coef=initial_zipf_coef,
+          initial_oi_prob=initial_oi_prob,
+          initial_oi=initial_oi
+        ))
+      }
       opt <- fit_tmb_oi(df$zipf, df$known, initial_oi, initial_const_coef, initial_zipf_coef)
       coef <- opt$par
       c(
