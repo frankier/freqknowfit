@@ -15,18 +15,22 @@ class NonParametricResult:
 
 
 class NonParametricEstimator:
-    def __init__(self, df, x, y):
-        known_mask = df[y]
+    def __init__(self, x, y, **kwargs):
+        known_mask = y
         self.known_count = known_mask.sum()
-        known_zipfs = df[known_mask][x].to_numpy()
+        known_zipfs = x[known_mask].to_numpy()
         self.kde_known = KDEUnivariate(known_zipfs)
-        self.kde_known.fit()
+        self.kde_known.fit(**kwargs)
         unknown_mask = ~known_mask
         self.unknown_count = unknown_mask.sum()
-        unknown_zipfs = df[unknown_mask][x].to_numpy()
+        unknown_zipfs = x[unknown_mask].to_numpy()
         self.kde_unknown = KDEUnivariate(unknown_zipfs)
-        self.kde_unknown.fit()
+        self.kde_unknown.fit(**kwargs)
         self.total_count = self.known_count + self.unknown_count
+
+    @classmethod
+    def from_df(cls, df, x, y, **kwargs):
+        return cls(df[x], df[y], **kwargs)
 
     def evaluate(self, samples):
         known_y = (

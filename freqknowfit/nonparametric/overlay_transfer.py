@@ -19,7 +19,7 @@ def resample_nonparameteric(df, x_in, x_out):
     x_series = pd.Series(x_in)
     curves = []
     for resp_idx, df_resp in groups:
-        est = NonParametricEstimator(df_resp, "zipf", "known")
+        est = NonParametricEstimator.from_df(df_resp, "zipf", "known")
         transformed_curve = get_overlay(x_in, x_out, inv_cloglog, est)
         #curve = est.evaluate(x).transfer()
         #curves.append(curve)

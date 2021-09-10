@@ -21,7 +21,7 @@ def main(dfin, fitin):
     cols = {"respondent": [], "mae": [], "mse": [], "weighted_mae": [], "weighted_mse": []}
     for resp_idx, df_resp, fit_row in IterFittedResps(dfin, fitin):
         predictions = logistic(fit_row["zipf_coef"].to_numpy(), fit_row["const_coef"].to_numpy())
-        nonparametric_est = NonParametricEstimator(df_resp, "zipf", "known")
+        nonparametric_est = NonParametricEstimator.from_df(df_resp, "zipf", "known")
         nonparametric_eval = nonparametric_est.evaluate(SAMPLES)
         trans = nonparametric_eval.transfer()
         supp = nonparametric_eval.support()
