@@ -1,7 +1,5 @@
 import click
 import scipy
-import datashader as ds
-import datashader.transfer_functions as tf
 import pandas as pd
 import numpy as np
 from .nonparametric import NonParametricEstimator
@@ -11,7 +9,6 @@ from matplotlib import pyplot as plt
 
 NUM_SAMPLE_POINTS = 2048
 TRANSFER_X = np.linspace(-10, 10, NUM_SAMPLE_POINTS)
-
 
 
 def resample_nonparameteric(df, x_in, x_out):
@@ -58,19 +55,6 @@ def get_overlay(x_in, x_out, trans_func, estimator):
         return None
 
 
-def plot_datashader(std_x, resampled_df, imgout):
-    cvs = ds.Canvas(plot_height=2048, plot_width=2048)
-    y_list = list(resampled_df.columns.to_numpy())
-    agg = cvs.line(resampled_df, x=std_x, y=y_list, agg=ds.count(), axis=1)
-    img = tf.shade(agg, how='eq_hist')
-    ds.utils.export_image(
-        img=img,
-        filename=imgout,
-        fmt=".png",
-        background="white"
-    )
-
-
 def plot_mpl(std_x, resampled_df, imgout):
     plt.plot(std_x, resampled_df.to_numpy().T)
     plt.savefig(imgout)
@@ -84,7 +68,6 @@ def main(dfin, imgout):
     zipf_x = np.linspace(0, 7, NUM_SAMPLE_POINTS)
     std_x = np.linspace(0, 1, NUM_SAMPLE_POINTS)
     resampled_df = resample_nonparameteric(df, zipf_x, std_x)
-    #plot_datashader(std_x, resampled_df, imgout)
     plot_mpl(std_x, resampled_df, imgout)
 
 
